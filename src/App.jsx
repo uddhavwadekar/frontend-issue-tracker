@@ -99,7 +99,7 @@ const App = () => {
   const [attachmentData, setAttachmentData] = useState({ type: 'LINK', url: '', name: '', file: null });
 
   // IMPORTANT: Replace with your IP for mobile testing
-  const API_BASE = "http://localhost:8081/api"; 
+  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8081/api";
 
   const safeFetchJson = async (url, options) => {
     try {
