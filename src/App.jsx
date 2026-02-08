@@ -99,8 +99,8 @@ const App = () => {
   const [attachmentData, setAttachmentData] = useState({ type: 'LINK', url: '', name: '', file: null });
 
   // IMPORTANT: Replace with your IP for mobile testing
+ const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8081/api";
 
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8081/api";
   const safeFetchJson = async (url, options) => {
     try {
       const res = await fetch(url, options);
@@ -417,51 +417,6 @@ const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8081/api";
   const handleAddLabel = async () => { const labelText = prompt("Label Name:"); if (!labelText) return; await safeFetchJson(`${API_BASE}/issues/${selectedIssue.id}/labels?label=${encodeURIComponent(labelText)}`, { method: 'POST' }); refreshIssue(); };
   const handleSetDate = async (e) => { const date = e.target.value; const isoDate = date ? new Date(date).toISOString() : null; await safeFetchJson(`${API_BASE}/issues/${selectedIssue.id}/duedate`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ date: isoDate }) }); refreshIssue(); };
   const saveDates = async () => { const payload = { startDate: dateData.startDate ? new Date(dateData.startDate).toISOString() : null, dueDate: dateData.dueDate ? new Date(dateData.dueDate).toISOString() : null, reminder: dateData.reminder.toString() }; await safeFetchJson(`${API_BASE}/issues/${selectedIssue.id}/duedate`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }); setActivePopover(null); refreshIssue(); };
-  // --- HELPER: Build Image URL ---
-  const getAttachmentUrl = (att) => {
-      // If it's a file uploaded to DB, construct the API link
-      if (att.type === 'FILE') {
-          return `${API_BASE}/issues/attachments/${att.id}`;
-      }
-      // If it's an external link (e.g. google.com), use it directly
-      return att.url;
-  };
-  // --- HELPER: Format Date Badge ---
-  const renderDueDateBadge = (dateString) => {
-      if (!dateString) return null;
-      
-      const date = new Date(dateString);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset time to compare dates only
-      
-      // Calculate difference in days
-      const diffTime = date - today;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      let colorClass = "bg-slate-100 text-slate-500"; // Default (Gray)
-      let iconColor = "text-slate-400";
-      
-      if (diffDays < 0) {
-          // Overdue (Red)
-          colorClass = "bg-red-100 text-red-600";
-          iconColor = "text-red-600";
-      } else if (diffDays === 0) {
-          // Due Today (Orange)
-          colorClass = "bg-orange-100 text-orange-600";
-          iconColor = "text-orange-600";
-      } else if (diffDays <= 2) {
-          // Due Soon (Yellow)
-          colorClass = "bg-yellow-100 text-yellow-700";
-          iconColor = "text-yellow-700";
-      }
-
-      return (
-          <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold w-fit ${colorClass}`}>
-              <Clock size={10} className={iconColor} />
-              <span>{new Date(dateString).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-          </div>
-      );
-  };
   const saveAttachment = async () => { if (attachmentData.type === 'LINK') { if(!attachmentData.url) return; await safeFetchJson(`${API_BASE}/issues/${selectedIssue.id}/attachments/link?url=${encodeURIComponent(attachmentData.url)}&name=${encodeURIComponent(attachmentData.name || 'Link')}`, {method:'POST'}); } else if (attachmentData.type === 'FILE' && attachmentData.file) { const formData = new FormData(); formData.append('file', attachmentData.file); await fetch(`${API_BASE}/issues/${selectedIssue.id}/attachments/upload`, { method: 'POST', body: formData }); } setAttachmentData({ type: 'LINK', url: '', name: '', file: null }); setActivePopover(null); refreshIssue(); };
   const handleAddAttachment = async () => { const url = prompt("Paste Link or Image URL:"); if(url) { await safeFetchJson(`${API_BASE}/issues/${selectedIssue.id}/attachments?url=${encodeURIComponent(url)}`, {method:'POST'}); refreshIssue(); } };
   const toggleAssignee = async (email, isAssigned) => { const method = isAssigned ? 'DELETE' : 'POST'; await safeFetchJson(`${API_BASE}/issues/${selectedIssue.id}/assignees?email=${encodeURIComponent(email)}&requesterEmail=${encodeURIComponent(currentUser.email)}`, { method }); refreshIssue(); };
@@ -471,19 +426,7 @@ const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8081/api";
   const handleInvite = async (e) => { e.preventDefault(); setLoading(true); const { ok, data } = await safeFetchJson(`${API_BASE}/workspaces/${activeWorkspaceId}/invite?email=${encodeURIComponent(inviteEmail)}&inviterEmail=${encodeURIComponent(currentUser.email)}&role=${inviteRole}`, { method: 'POST' }); if (ok) { alert("Invitation sent!"); setShowModal(null); setInviteEmail(''); } else alert(data); setLoading(false); };
   const handleCreateIssue = async (e) => { e.preventDefault(); const payload = { ...newIssue, creatorEmail: currentUser.email }; const { ok, data } = await safeFetchJson(`${API_BASE}/issues/create/${activeProject.id}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }); if(ok) { setShowModal(null); setNewIssue({ summary: '', description: '', priority: 'MEDIUM', assigneeEmail: '' }); refreshBoard(); } else alert(data); };
   const handleAddComment = async (e) => { e.preventDefault(); await safeFetchJson(`${API_BASE}/comments/add`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({text: commentText, userEmail: currentUser.email, issueId: selectedIssue.id}) }); setCommentText(''); safeFetchJson(`${API_BASE}/comments/issue/${selectedIssue.id}`).then(({data})=>setComments(Array.isArray(data)?data:[])); };
-const handleDeleteAttachment = async (attachmentId) => {
-      if (!window.confirm("Are you sure you want to delete this attachment?")) return;
-      
-      const { ok } = await safeFetchJson(`${API_BASE}/issues/attachments/${attachmentId}`, { 
-          method: 'DELETE' 
-      });
-      
-      if (ok) {
-          refreshIssue(); // Reload to see it gone
-      } else {
-          alert("Failed to delete attachment.");
-      }
-  };
+
   const onDragStart = () => { 
     setIsDragging(true); 
     updatesPaused.current = true;
@@ -751,71 +694,40 @@ const handleDeleteAttachment = async (attachmentId) => {
             <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
               <div className="flex gap-4 h-full px-8 pb-4 pt-4 items-start min-w-full">
                 {displayedColumns.map(col => (
-                  {/* Inside the map loop: {col.issues.map((issue, index) => ... */}
-<Draggable key={issue.id} draggableId={issue.id.toString()} index={index} isDragDisabled={isFilterActive}>
-  {(provided) => (
-    <div 
-      ref={provided.innerRef} 
-      {...provided.draggableProps} 
-      {...provided.dragHandleProps} 
-      onClick={() => setSelectedIssue(issue)} 
-      className="bg-white p-3 rounded shadow-sm border-b border-slate-300 hover:bg-slate-50 cursor-pointer group mb-2"
-    >
-      {/* Cover Image */}
-      {issue.attachments && issue.attachments.find(a => a.type === 'FILE' && a.name.match(/\.(jpeg|jpg|png|gif)$/i)) && (
-        <div className="mb-2 rounded overflow-hidden h-24">
-         <img src={getAttachmentUrl(issue.attachments.find(a => a.type === 'FILE' && a.name.match(/\.(jpeg|jpg|png|gif)$/i)))} alt="Cover" className="w-full h-full object-cover" />
-        </div>
-      )}
-
-      {/* Labels */}
-      {issue.labels && issue.labels.length > 0 && (
-        <div className="flex gap-1 mb-2 flex-wrap">
-          {issue.labels.map((l, i) => (
-            <span key={i} className="bg-green-100 text-green-700 px-1.5 rounded text-[10px] font-bold">{l}</span>
-          ))}
-        </div>
-      )}
-
-      {/* Summary */}
-      <div className="text-sm text-[#172B4D] mb-2 font-medium">{issue.summary}</div>
-
-      {/* --- NEW: DUE DATE BADGE --- */}
-      {issue.dueDate && (
-          <div className="mb-2">
-              {renderDueDateBadge(issue.dueDate)}
-          </div>
-      )}
-      {/* --------------------------- */}
-
-      {/* Footer (ID, Checklists, Assignees) */}
-      <div className="flex justify-between items-center text-[10px] text-slate-500 font-bold">
-        <span>{activeProject.projectKey}-{issue.id}</span>
-        
-        <div className="flex items-center gap-2">
-           {/* Checklist Icon */}
-           {issue.checklists && issue.checklists.length > 0 && (
-             <div className="flex items-center gap-1">
-               <Icons.CheckSquare size={12}/> 
-               {issue.checklists.reduce((acc, cl) => acc + cl.items.filter(i=>i.isChecked).length, 0)}/{issue.checklists.reduce((acc, cl) => acc + cl.items.length, 0)}
-             </div>
-           )}
-           
-           {/* Assignees */}
-           {issue.assignees && issue.assignees.length > 0 && (
-             <div className="flex -space-x-1">
-                {issue.assignees.slice(0,3).map(u => (
-                    <div key={u.id} className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center border-2 border-white text-[9px] overflow-hidden" title={u.username}>
-                        {u.hasProfileImage ? <img src={getProfileImg(u.id)} className="w-full h-full object-cover"/> : u.username.charAt(0).toUpperCase()}
-                    </div>
-                ))}
-             </div>
-           )}
-        </div>
-      </div>
-    </div>
-  )}
-</Draggable>
+                  <Droppable key={col.id} droppableId={col.name} isDropDisabled={isFilterActive}>
+                    {(provided) => (
+                      <div ref={provided.innerRef} {...provided.droppableProps} className="w-72 bg-[#EBECF0] rounded-xl p-2 flex flex-col max-h-full shrink-0 shadow-sm">
+                        <div className="text-[11px] font-bold text-slate-500 uppercase p-3 tracking-wider">{col.name}</div>
+                        <div className="flex-1 overflow-y-auto space-y-2 p-1 min-h-[50px] custom-scrollbar">
+                          {col.issues && col.issues.map((issue, index) => (
+                            <Draggable key={issue.id} draggableId={issue.id.toString()} index={index} isDragDisabled={isFilterActive}>
+                              {(provided) => (
+                                <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => setSelectedIssue(issue)} className="bg-white p-3 rounded shadow-sm border-b border-slate-300 hover:bg-slate-50 cursor-pointer group">
+                                  {issue.attachments && issue.attachments.find(a => a.type === 'FILE' && a.name.match(/\.(jpeg|jpg|png|gif)$/i)) && (
+                                    <div className="mb-2 rounded overflow-hidden h-24">
+                                      <img src={issue.attachments.find(a => a.type === 'FILE' && a.name.match(/\.(jpeg|jpg|png|gif)$/i)).url} alt="Cover" className="w-full h-full object-cover" />
+                                    </div>
+                                  )}
+                                  <div className="text-sm text-[#172B4D] mb-2">{issue.summary}</div>
+                                  {issue.labels && issue.labels.length > 0 && <div className="flex gap-1 mb-2 flex-wrap">{issue.labels.map((l, i) => <span key={i} className="bg-green-100 text-green-700 px-1.5 rounded text-[10px] font-bold">{l}</span>)}</div>}
+                                  <div className="flex justify-between items-center text-[10px] text-slate-500 font-bold">
+                                    <span>{activeProject.projectKey}-{issue.id}</span>
+                                    <div className="flex items-center gap-2">
+                                       {issue.checklists && issue.checklists.length > 0 && <div className="flex items-center gap-1"><Icons.CheckSquare size={12}/> {issue.checklists.reduce((acc, cl) => acc + cl.items.filter(i=>i.isChecked).length, 0)}/{issue.checklists.reduce((acc, cl) => acc + cl.items.length, 0)}</div>}
+                                       {issue.assignees && issue.assignees.length > 0 && (
+                                         <div className="flex -space-x-1">
+                                            {issue.assignees.slice(0,3).map(u => (
+                                                <div key={u.id} className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center border-2 border-white text-[9px] overflow-hidden">
+                                                    {u.hasProfileImage ? <img src={getProfileImg(u.id)} className="w-full h-full object-cover"/> : u.username.charAt(0).toUpperCase()}
+                                                </div>
+                                            ))}
+                                         </div>
+                                       )}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </Draggable>
                           ))}
                           {provided.placeholder}
                         </div>
@@ -985,35 +897,7 @@ const handleDeleteAttachment = async (attachmentId) => {
                      {selectedIssue.labels && selectedIssue.labels.length > 0 && <div className="flex gap-2 flex-wrap">{selectedIssue.labels.map((l, i)=><span key={i} className="bg-green-100 text-green-700 font-bold text-xs px-2 py-1 rounded">{l}</span>)}</div>}
                      {selectedIssue.assignees && selectedIssue.assignees.length > 0 && (<div><div className="text-xs font-bold text-slate-500 uppercase mb-2">Members</div><div className="flex gap-2">{selectedIssue.assignees.map(u => (<div key={u.id} className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold overflow-hidden" title={u.username}>{u.hasProfileImage ? <img src={getProfileImg(u.id)} className="w-full h-full object-cover"/> : u.username.charAt(0).toUpperCase()}</div>))}<button onClick={() => setActivePopover('member')} className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center hover:bg-slate-300"><Icons.Plus /></button></div></div>)}
                      <div><div className="flex items-center gap-2 font-bold text-slate-700 mb-2"><Icons.Briefcase /> Description</div>{editingDesc ? (<div><textarea className="w-full p-3 border rounded-lg min-h-[120px]" value={descText} onChange={e => setDescText(e.target.value)} autoFocus /><div className="flex gap-2 mt-2"><button onClick={handleSaveDescription} className="bg-blue-600 text-white px-3 py-1.5 rounded font-bold text-sm">Save</button><button onClick={() => setEditingDesc(false)} className="text-slate-500 text-sm">Cancel</button></div></div>) : (<div onClick={() => {setEditingDesc(true); setDescText(selectedIssue.description)}} className="bg-slate-200/50 p-4 rounded-lg min-h-[60px] text-sm text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors whitespace-pre-wrap leading-relaxed">{selectedIssue.description || "Add a more detailed description..."}</div>)}</div>
-                     {selectedIssue.attachments.map(att => (
-  <div key={att.id} className="flex gap-3 p-2 bg-white border rounded-lg hover:bg-slate-50 shadow-sm relative group transition-all">
-<a href={getAttachmentUrl(att)} target="_blank" rel="noreferrer" className="w-24 h-16 bg-slate-200 flex items-center justify-center font-bold text-xs text-slate-500 overflow-hidden rounded shrink-0">
-  {att.type === 'FILE' && att.name.match(/\.(jpeg|jpg|png|gif)$/i) ? 
-    <img src={getAttachmentUrl(att)} className="w-full h-full object-cover" /> : 
-    'LINK'
-  }
-</a>
-<div className="flex-1 flex flex-col justify-center min-w-0">
-    <div className="font-bold text-sm truncate">{att.name}</div>
-    <div className="text-xs text-slate-500 mb-1">Added {new Date(att.uploadedAt).toLocaleDateString()}</div>
-    <a href={getAttachmentUrl(att)} target="_blank" rel="noreferrer" className="text-xs font-bold underline">Open</a>
-</div>
-      <a href={att.url} target="_blank" rel="noreferrer" className="text-xs font-bold underline text-blue-600 hover:text-blue-800">Open</a>
-    </div>
-
-    {/* DELETE BUTTON (Visible on Hover) */}
-    <button 
-      onClick={(e) => { 
-        e.stopPropagation(); // Stop click from opening the link (if parent has click)
-        handleDeleteAttachment(att.id); 
-      }} 
-      className="absolute top-2 right-2 text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all"
-      title="Delete Attachment"
-    >
-      <Icons.Trash2 size={14} />
-    </button>
-  </div>
-))}
+                     {selectedIssue.attachments && selectedIssue.attachments.length > 0 && <div><div className="flex items-center gap-2 font-bold text-slate-700 mb-2"><Icons.Paperclip /> Attachments</div><div className="grid grid-cols-2 gap-4">{selectedIssue.attachments.map(att => (<div key={att.id} className="flex gap-3 p-2 bg-white border rounded-lg hover:bg-slate-50 shadow-sm"><a href={att.url} target="_blank" rel="noreferrer" className="w-24 h-16 bg-slate-200 flex items-center justify-center font-bold text-xs text-slate-500 overflow-hidden rounded">{att.type === 'FILE' && att.name.match(/\.(jpeg|jpg|png|gif)$/i) ? <img src={att.url} className="w-full h-full object-cover" /> : 'LINK'}</a><div className="flex-1 truncate"><div className="font-bold text-sm truncate">{att.name}</div><div className="text-xs text-slate-500 mb-1">Added {new Date(att.uploadedAt).toLocaleDateString()}</div><a href={att.url} target="_blank" rel="noreferrer" className="text-xs font-bold underline">Open</a></div></div>))}</div></div>}
                      {selectedIssue.checklists?.map(cl => (<div key={cl.id}><div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2 font-bold text-slate-700 text-lg"><Icons.CheckSquare /> {cl.name}</div><button onClick={() => { safeFetchJson(`${API_BASE}/issues/checklists/${cl.id}`, {method:'DELETE'}); refreshIssue(); }} className="text-xs bg-slate-200 px-2 py-1 rounded hover:bg-red-100 hover:text-red-600">Delete</button></div><div className="flex items-center gap-2 mb-2"><span className="text-[10px] text-slate-500 font-bold">{Math.round((cl.items.filter(i=>i.isChecked).length / (cl.items.length || 1)) * 100)}%</span><div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden"><div className="h-full bg-blue-500 transition-all duration-300" style={{width: `${(cl.items.filter(i=>i.isChecked).length / (cl.items.length || 1)) * 100}%`}}></div></div></div><div className="space-y-1 mb-2">{cl.items.map(item => (<div key={item.id} className="flex items-center gap-2 p-1.5 hover:bg-slate-200 rounded group transition-colors"><input type="checkbox" checked={item.isChecked} onChange={() => handleToggleItem(item.id, item.isChecked)} className="accent-blue-600 w-4 h-4 cursor-pointer" /><span className={`text-sm ${item.isChecked ? "line-through text-slate-400" : "text-slate-700"}`}>{item.text}</span><button onClick={() => { safeFetchJson(`${API_BASE}/issues/checklists/items/${item.id}`, {method:'DELETE'}); refreshIssue(); }} className="ml-auto opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500"><Icons.Trash2 /></button></div>))}</div><div className="pl-0"><input className="bg-white border border-slate-300 rounded px-3 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" placeholder="Add an item" value={newItemText[cl.id] || ''} onChange={e => setNewItemText({...newItemText, [cl.id]: e.target.value})} onKeyDown={e => { if(e.key === 'Enter') handleAddItem(cl.id); }}/></div></div>))}
                      
                      {/* History & Comments */}
