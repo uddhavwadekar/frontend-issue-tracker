@@ -909,7 +909,34 @@ const handleDeleteAttachment = async (attachmentId) => {
                      {selectedIssue.labels && selectedIssue.labels.length > 0 && <div className="flex gap-2 flex-wrap">{selectedIssue.labels.map((l, i)=><span key={i} className="bg-green-100 text-green-700 font-bold text-xs px-2 py-1 rounded">{l}</span>)}</div>}
                      {selectedIssue.assignees && selectedIssue.assignees.length > 0 && (<div><div className="text-xs font-bold text-slate-500 uppercase mb-2">Members</div><div className="flex gap-2">{selectedIssue.assignees.map(u => (<div key={u.id} className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold overflow-hidden" title={u.username}>{u.hasProfileImage ? <img src={getProfileImg(u.id)} className="w-full h-full object-cover"/> : u.username.charAt(0).toUpperCase()}</div>))}<button onClick={() => setActivePopover('member')} className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center hover:bg-slate-300"><Icons.Plus /></button></div></div>)}
                      <div><div className="flex items-center gap-2 font-bold text-slate-700 mb-2"><Icons.Briefcase /> Description</div>{editingDesc ? (<div><textarea className="w-full p-3 border rounded-lg min-h-[120px]" value={descText} onChange={e => setDescText(e.target.value)} autoFocus /><div className="flex gap-2 mt-2"><button onClick={handleSaveDescription} className="bg-blue-600 text-white px-3 py-1.5 rounded font-bold text-sm">Save</button><button onClick={() => setEditingDesc(false)} className="text-slate-500 text-sm">Cancel</button></div></div>) : (<div onClick={() => {setEditingDesc(true); setDescText(selectedIssue.description)}} className="bg-slate-200/50 p-4 rounded-lg min-h-[60px] text-sm text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors whitespace-pre-wrap leading-relaxed">{selectedIssue.description || "Add a more detailed description..."}</div>)}</div>
-                     {selectedIssue.attachments && selectedIssue.attachments.length > 0 && <div><div className="flex items-center gap-2 font-bold text-slate-700 mb-2"><Icons.Paperclip /> Attachments</div><div className="grid grid-cols-2 gap-4">{selectedIssue.attachments.map(att => (<div key={att.id} className="flex gap-3 p-2 bg-white border rounded-lg hover:bg-slate-50 shadow-sm"><a href={att.url} target="_blank" rel="noreferrer" className="w-24 h-16 bg-slate-200 flex items-center justify-center font-bold text-xs text-slate-500 overflow-hidden rounded">{att.type === 'FILE' && att.name.match(/\.(jpeg|jpg|png|gif)$/i) ? <img src={att.url} className="w-full h-full object-cover" /> : 'LINK'}</a><div className="flex-1 truncate"><div className="font-bold text-sm truncate">{att.name}</div><div className="text-xs text-slate-500 mb-1">Added {new Date(att.uploadedAt).toLocaleDateString()}</div><a href={att.url} target="_blank" rel="noreferrer" className="text-xs font-bold underline">Open</a></div></div>))}</div></div>}
+                     {selectedIssue.attachments.map(att => (
+  <div key={att.id} className="flex gap-3 p-2 bg-white border rounded-lg hover:bg-slate-50 shadow-sm relative group transition-all">
+    <a href={att.url} target="_blank" rel="noreferrer" className="w-24 h-16 bg-slate-200 flex items-center justify-center font-bold text-xs text-slate-500 overflow-hidden rounded shrink-0">
+      {att.type === 'FILE' && att.name.match(/\.(jpeg|jpg|png|gif)$/i) ? 
+        <img src={att.url} className="w-full h-full object-cover" alt="attachment" /> : 
+        'LINK'
+      }
+    </a>
+    
+    <div className="flex-1 min-w-0 flex flex-col justify-center">
+      <div className="font-bold text-sm truncate pr-6" title={att.name}>{att.name}</div>
+      <div className="text-xs text-slate-500 mb-1">Added {new Date(att.uploadedAt).toLocaleDateString()}</div>
+      <a href={att.url} target="_blank" rel="noreferrer" className="text-xs font-bold underline text-blue-600 hover:text-blue-800">Open</a>
+    </div>
+
+    {/* DELETE BUTTON (Visible on Hover) */}
+    <button 
+      onClick={(e) => { 
+        e.stopPropagation(); // Stop click from opening the link (if parent has click)
+        handleDeleteAttachment(att.id); 
+      }} 
+      className="absolute top-2 right-2 text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+      title="Delete Attachment"
+    >
+      <Icons.Trash2 size={14} />
+    </button>
+  </div>
+))}
                      {selectedIssue.checklists?.map(cl => (<div key={cl.id}><div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2 font-bold text-slate-700 text-lg"><Icons.CheckSquare /> {cl.name}</div><button onClick={() => { safeFetchJson(`${API_BASE}/issues/checklists/${cl.id}`, {method:'DELETE'}); refreshIssue(); }} className="text-xs bg-slate-200 px-2 py-1 rounded hover:bg-red-100 hover:text-red-600">Delete</button></div><div className="flex items-center gap-2 mb-2"><span className="text-[10px] text-slate-500 font-bold">{Math.round((cl.items.filter(i=>i.isChecked).length / (cl.items.length || 1)) * 100)}%</span><div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden"><div className="h-full bg-blue-500 transition-all duration-300" style={{width: `${(cl.items.filter(i=>i.isChecked).length / (cl.items.length || 1)) * 100}%`}}></div></div></div><div className="space-y-1 mb-2">{cl.items.map(item => (<div key={item.id} className="flex items-center gap-2 p-1.5 hover:bg-slate-200 rounded group transition-colors"><input type="checkbox" checked={item.isChecked} onChange={() => handleToggleItem(item.id, item.isChecked)} className="accent-blue-600 w-4 h-4 cursor-pointer" /><span className={`text-sm ${item.isChecked ? "line-through text-slate-400" : "text-slate-700"}`}>{item.text}</span><button onClick={() => { safeFetchJson(`${API_BASE}/issues/checklists/items/${item.id}`, {method:'DELETE'}); refreshIssue(); }} className="ml-auto opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500"><Icons.Trash2 /></button></div>))}</div><div className="pl-0"><input className="bg-white border border-slate-300 rounded px-3 py-2 text-sm w-full focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" placeholder="Add an item" value={newItemText[cl.id] || ''} onChange={e => setNewItemText({...newItemText, [cl.id]: e.target.value})} onKeyDown={e => { if(e.key === 'Enter') handleAddItem(cl.id); }}/></div></div>))}
                      
                      {/* History & Comments */}
