@@ -757,11 +757,19 @@ const handleDeleteAttachment = async (attachmentId) => {
                                     </div>
                                   )}
                                   <div className="text-sm text-[#172B4D] mb-2">{issue.summary}</div>
+                               
                                   {issue.labels && issue.labels.length > 0 && <div className="flex gap-1 mb-2 flex-wrap">{issue.labels.map((l, i) => <span key={i} className="bg-green-100 text-green-700 px-1.5 rounded text-[10px] font-bold">{l}</span>)}</div>}
                                   <div className="flex justify-between items-center text-[10px] text-slate-500 font-bold">
                                     <span>{activeProject.projectKey}-{issue.id}</span>
                                     <div className="flex items-center gap-2">
-                                       {issue.checklists && issue.checklists.length > 0 && <div className="flex items-center gap-1"><Icons.CheckSquare size={12}/> {issue.checklists.reduce((acc, cl) => acc + cl.items.filter(i=>i.isChecked).length, 0)}/{issue.checklists.reduce((acc, cl) => acc + cl.items.length, 0)}</div>}
+                                       {/* --- NEW: DUE DATE BADGE --- */}
+      {issue.dueDate && (
+          <div className="mb-2">
+              {renderDueDateBadge(issue.dueDate)}
+          </div>
+      )}
+      {/* --------------------------- */}
+                                      {issue.checklists && issue.checklists.length > 0 && <div className="flex items-center gap-1"><Icons.CheckSquare size={12}/> {issue.checklists.reduce((acc, cl) => acc + cl.items.filter(i=>i.isChecked).length, 0)}/{issue.checklists.reduce((acc, cl) => acc + cl.items.length, 0)}</div>}
                                        {issue.assignees && issue.assignees.length > 0 && (
                                          <div className="flex -space-x-1">
                                             {issue.assignees.slice(0,3).map(u => (
