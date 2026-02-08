@@ -764,7 +764,7 @@ const handleDeleteAttachment = async (attachmentId) => {
       {/* Cover Image */}
       {issue.attachments && issue.attachments.find(a => a.type === 'FILE' && a.name.match(/\.(jpeg|jpg|png|gif)$/i)) && (
         <div className="mb-2 rounded overflow-hidden h-24">
-          <img src={issue.attachments.find(a => a.type === 'FILE' && a.name.match(/\.(jpeg|jpg|png|gif)$/i)).url} alt="Cover" className="w-full h-full object-cover" />
+         <img src={getAttachmentUrl(issue.attachments.find(a => a.type === 'FILE' && a.name.match(/\.(jpeg|jpg|png|gif)$/i)))} alt="Cover" className="w-full h-full object-cover" />
         </div>
       )}
 
@@ -987,16 +987,17 @@ const handleDeleteAttachment = async (attachmentId) => {
                      <div><div className="flex items-center gap-2 font-bold text-slate-700 mb-2"><Icons.Briefcase /> Description</div>{editingDesc ? (<div><textarea className="w-full p-3 border rounded-lg min-h-[120px]" value={descText} onChange={e => setDescText(e.target.value)} autoFocus /><div className="flex gap-2 mt-2"><button onClick={handleSaveDescription} className="bg-blue-600 text-white px-3 py-1.5 rounded font-bold text-sm">Save</button><button onClick={() => setEditingDesc(false)} className="text-slate-500 text-sm">Cancel</button></div></div>) : (<div onClick={() => {setEditingDesc(true); setDescText(selectedIssue.description)}} className="bg-slate-200/50 p-4 rounded-lg min-h-[60px] text-sm text-slate-700 cursor-pointer hover:bg-slate-200 transition-colors whitespace-pre-wrap leading-relaxed">{selectedIssue.description || "Add a more detailed description..."}</div>)}</div>
                      {selectedIssue.attachments.map(att => (
   <div key={att.id} className="flex gap-3 p-2 bg-white border rounded-lg hover:bg-slate-50 shadow-sm relative group transition-all">
-    <a href={att.url} target="_blank" rel="noreferrer" className="w-24 h-16 bg-slate-200 flex items-center justify-center font-bold text-xs text-slate-500 overflow-hidden rounded shrink-0">
-      {att.type === 'FILE' && att.name.match(/\.(jpeg|jpg|png|gif)$/i) ? 
-        <img src={att.url} className="w-full h-full object-cover" alt="attachment" /> : 
-        'LINK'
-      }
-    </a>
-    
-    <div className="flex-1 min-w-0 flex flex-col justify-center">
-      <div className="font-bold text-sm truncate pr-6" title={att.name}>{att.name}</div>
-      <div className="text-xs text-slate-500 mb-1">Added {new Date(att.uploadedAt).toLocaleDateString()}</div>
+<a href={getAttachmentUrl(att)} target="_blank" rel="noreferrer" className="w-24 h-16 bg-slate-200 flex items-center justify-center font-bold text-xs text-slate-500 overflow-hidden rounded shrink-0">
+  {att.type === 'FILE' && att.name.match(/\.(jpeg|jpg|png|gif)$/i) ? 
+    <img src={getAttachmentUrl(att)} className="w-full h-full object-cover" /> : 
+    'LINK'
+  }
+</a>
+<div className="flex-1 flex flex-col justify-center min-w-0">
+    <div className="font-bold text-sm truncate">{att.name}</div>
+    <div className="text-xs text-slate-500 mb-1">Added {new Date(att.uploadedAt).toLocaleDateString()}</div>
+    <a href={getAttachmentUrl(att)} target="_blank" rel="noreferrer" className="text-xs font-bold underline">Open</a>
+</div>
       <a href={att.url} target="_blank" rel="noreferrer" className="text-xs font-bold underline text-blue-600 hover:text-blue-800">Open</a>
     </div>
 
