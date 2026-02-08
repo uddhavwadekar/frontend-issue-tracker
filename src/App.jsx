@@ -742,48 +742,71 @@ const handleDeleteAttachment = async (attachmentId) => {
             <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
               <div className="flex gap-4 h-full px-8 pb-4 pt-4 items-start min-w-full">
                 {displayedColumns.map(col => (
-                  <Droppable key={col.id} droppableId={col.name} isDropDisabled={isFilterActive}>
-                    {(provided) => (
-                      <div ref={provided.innerRef} {...provided.droppableProps} className="w-72 bg-[#EBECF0] rounded-xl p-2 flex flex-col max-h-full shrink-0 shadow-sm">
-                        <div className="text-[11px] font-bold text-slate-500 uppercase p-3 tracking-wider">{col.name}</div>
-                        <div className="flex-1 overflow-y-auto space-y-2 p-1 min-h-[50px] custom-scrollbar">
-                          {col.issues && col.issues.map((issue, index) => (
-                            <Draggable key={issue.id} draggableId={issue.id.toString()} index={index} isDragDisabled={isFilterActive}>
-                              {(provided) => (
-                                <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => setSelectedIssue(issue)} className="bg-white p-3 rounded shadow-sm border-b border-slate-300 hover:bg-slate-50 cursor-pointer group">
-                                  {issue.attachments && issue.attachments.find(a => a.type === 'FILE' && a.name.match(/\.(jpeg|jpg|png|gif)$/i)) && (
-                                    <div className="mb-2 rounded overflow-hidden h-24">
-                                      <img src={issue.attachments.find(a => a.type === 'FILE' && a.name.match(/\.(jpeg|jpg|png|gif)$/i)).url} alt="Cover" className="w-full h-full object-cover" />
-                                    </div>
-                                  )}
-                                  <div className="text-sm text-[#172B4D] mb-2">{issue.summary}</div>
-                               
-                                  {issue.labels && issue.labels.length > 0 && <div className="flex gap-1 mb-2 flex-wrap">{issue.labels.map((l, i) => <span key={i} className="bg-green-100 text-green-700 px-1.5 rounded text-[10px] font-bold">{l}</span>)}</div>}
-                                  <div className="flex justify-between items-center text-[10px] text-slate-500 font-bold">
-                                    <span>{activeProject.projectKey}-{issue.id}</span>
-                                    <div className="flex items-center gap-2">
-                                       {/* --- NEW: DUE DATE BADGE --- */}
+                  {/* Inside the map loop: {col.issues.map((issue, index) => ... */}
+<Draggable key={issue.id} draggableId={issue.id.toString()} index={index} isDragDisabled={isFilterActive}>
+  {(provided) => (
+    <div 
+      ref={provided.innerRef} 
+      {...provided.draggableProps} 
+      {...provided.dragHandleProps} 
+      onClick={() => setSelectedIssue(issue)} 
+      className="bg-white p-3 rounded shadow-sm border-b border-slate-300 hover:bg-slate-50 cursor-pointer group mb-2"
+    >
+      {/* Cover Image */}
+      {issue.attachments && issue.attachments.find(a => a.type === 'FILE' && a.name.match(/\.(jpeg|jpg|png|gif)$/i)) && (
+        <div className="mb-2 rounded overflow-hidden h-24">
+          <img src={issue.attachments.find(a => a.type === 'FILE' && a.name.match(/\.(jpeg|jpg|png|gif)$/i)).url} alt="Cover" className="w-full h-full object-cover" />
+        </div>
+      )}
+
+      {/* Labels */}
+      {issue.labels && issue.labels.length > 0 && (
+        <div className="flex gap-1 mb-2 flex-wrap">
+          {issue.labels.map((l, i) => (
+            <span key={i} className="bg-green-100 text-green-700 px-1.5 rounded text-[10px] font-bold">{l}</span>
+          ))}
+        </div>
+      )}
+
+      {/* Summary */}
+      <div className="text-sm text-[#172B4D] mb-2 font-medium">{issue.summary}</div>
+
+      {/* --- NEW: DUE DATE BADGE --- */}
       {issue.dueDate && (
           <div className="mb-2">
               {renderDueDateBadge(issue.dueDate)}
           </div>
       )}
       {/* --------------------------- */}
-                                      {issue.checklists && issue.checklists.length > 0 && <div className="flex items-center gap-1"><Icons.CheckSquare size={12}/> {issue.checklists.reduce((acc, cl) => acc + cl.items.filter(i=>i.isChecked).length, 0)}/{issue.checklists.reduce((acc, cl) => acc + cl.items.length, 0)}</div>}
-                                       {issue.assignees && issue.assignees.length > 0 && (
-                                         <div className="flex -space-x-1">
-                                            {issue.assignees.slice(0,3).map(u => (
-                                                <div key={u.id} className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center border-2 border-white text-[9px] overflow-hidden">
-                                                    {u.hasProfileImage ? <img src={getProfileImg(u.id)} className="w-full h-full object-cover"/> : u.username.charAt(0).toUpperCase()}
-                                                </div>
-                                            ))}
-                                         </div>
-                                       )}
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </Draggable>
+
+      {/* Footer (ID, Checklists, Assignees) */}
+      <div className="flex justify-between items-center text-[10px] text-slate-500 font-bold">
+        <span>{activeProject.projectKey}-{issue.id}</span>
+        
+        <div className="flex items-center gap-2">
+           {/* Checklist Icon */}
+           {issue.checklists && issue.checklists.length > 0 && (
+             <div className="flex items-center gap-1">
+               <Icons.CheckSquare size={12}/> 
+               {issue.checklists.reduce((acc, cl) => acc + cl.items.filter(i=>i.isChecked).length, 0)}/{issue.checklists.reduce((acc, cl) => acc + cl.items.length, 0)}
+             </div>
+           )}
+           
+           {/* Assignees */}
+           {issue.assignees && issue.assignees.length > 0 && (
+             <div className="flex -space-x-1">
+                {issue.assignees.slice(0,3).map(u => (
+                    <div key={u.id} className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center border-2 border-white text-[9px] overflow-hidden" title={u.username}>
+                        {u.hasProfileImage ? <img src={getProfileImg(u.id)} className="w-full h-full object-cover"/> : u.username.charAt(0).toUpperCase()}
+                    </div>
+                ))}
+             </div>
+           )}
+        </div>
+      </div>
+    </div>
+  )}
+</Draggable>
                           ))}
                           {provided.placeholder}
                         </div>
