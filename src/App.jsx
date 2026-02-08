@@ -99,8 +99,8 @@ const App = () => {
   const [attachmentData, setAttachmentData] = useState({ type: 'LINK', url: '', name: '', file: null });
 
   // IMPORTANT: Replace with your IP for mobile testing
-  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8081/api";
 
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8081/api";
   const safeFetchJson = async (url, options) => {
     try {
       const res = await fetch(url, options);
@@ -417,6 +417,15 @@ const App = () => {
   const handleAddLabel = async () => { const labelText = prompt("Label Name:"); if (!labelText) return; await safeFetchJson(`${API_BASE}/issues/${selectedIssue.id}/labels?label=${encodeURIComponent(labelText)}`, { method: 'POST' }); refreshIssue(); };
   const handleSetDate = async (e) => { const date = e.target.value; const isoDate = date ? new Date(date).toISOString() : null; await safeFetchJson(`${API_BASE}/issues/${selectedIssue.id}/duedate`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ date: isoDate }) }); refreshIssue(); };
   const saveDates = async () => { const payload = { startDate: dateData.startDate ? new Date(dateData.startDate).toISOString() : null, dueDate: dateData.dueDate ? new Date(dateData.dueDate).toISOString() : null, reminder: dateData.reminder.toString() }; await safeFetchJson(`${API_BASE}/issues/${selectedIssue.id}/duedate`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }); setActivePopover(null); refreshIssue(); };
+  // --- HELPER: Build Image URL ---
+  const getAttachmentUrl = (att) => {
+      // If it's a file uploaded to DB, construct the API link
+      if (att.type === 'FILE') {
+          return `${API_BASE}/issues/attachments/${att.id}`;
+      }
+      // If it's an external link (e.g. google.com), use it directly
+      return att.url;
+  };
   // --- HELPER: Format Date Badge ---
   const renderDueDateBadge = (dateString) => {
       if (!dateString) return null;
