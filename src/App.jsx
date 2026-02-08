@@ -417,6 +417,42 @@ const App = () => {
   const handleAddLabel = async () => { const labelText = prompt("Label Name:"); if (!labelText) return; await safeFetchJson(`${API_BASE}/issues/${selectedIssue.id}/labels?label=${encodeURIComponent(labelText)}`, { method: 'POST' }); refreshIssue(); };
   const handleSetDate = async (e) => { const date = e.target.value; const isoDate = date ? new Date(date).toISOString() : null; await safeFetchJson(`${API_BASE}/issues/${selectedIssue.id}/duedate`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ date: isoDate }) }); refreshIssue(); };
   const saveDates = async () => { const payload = { startDate: dateData.startDate ? new Date(dateData.startDate).toISOString() : null, dueDate: dateData.dueDate ? new Date(dateData.dueDate).toISOString() : null, reminder: dateData.reminder.toString() }; await safeFetchJson(`${API_BASE}/issues/${selectedIssue.id}/duedate`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }); setActivePopover(null); refreshIssue(); };
+  // --- HELPER: Format Date Badge ---
+  const renderDueDateBadge = (dateString) => {
+      if (!dateString) return null;
+      
+      const date = new Date(dateString);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to compare dates only
+      
+      // Calculate difference in days
+      const diffTime = date - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      let colorClass = "bg-slate-100 text-slate-500"; // Default (Gray)
+      let iconColor = "text-slate-400";
+      
+      if (diffDays < 0) {
+          // Overdue (Red)
+          colorClass = "bg-red-100 text-red-600";
+          iconColor = "text-red-600";
+      } else if (diffDays === 0) {
+          // Due Today (Orange)
+          colorClass = "bg-orange-100 text-orange-600";
+          iconColor = "text-orange-600";
+      } else if (diffDays <= 2) {
+          // Due Soon (Yellow)
+          colorClass = "bg-yellow-100 text-yellow-700";
+          iconColor = "text-yellow-700";
+      }
+
+      return (
+          <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold w-fit ${colorClass}`}>
+              <Clock size={10} className={iconColor} />
+              <span>{new Date(dateString).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+          </div>
+      );
+  };
   const saveAttachment = async () => { if (attachmentData.type === 'LINK') { if(!attachmentData.url) return; await safeFetchJson(`${API_BASE}/issues/${selectedIssue.id}/attachments/link?url=${encodeURIComponent(attachmentData.url)}&name=${encodeURIComponent(attachmentData.name || 'Link')}`, {method:'POST'}); } else if (attachmentData.type === 'FILE' && attachmentData.file) { const formData = new FormData(); formData.append('file', attachmentData.file); await fetch(`${API_BASE}/issues/${selectedIssue.id}/attachments/upload`, { method: 'POST', body: formData }); } setAttachmentData({ type: 'LINK', url: '', name: '', file: null }); setActivePopover(null); refreshIssue(); };
   const handleAddAttachment = async () => { const url = prompt("Paste Link or Image URL:"); if(url) { await safeFetchJson(`${API_BASE}/issues/${selectedIssue.id}/attachments?url=${encodeURIComponent(url)}`, {method:'POST'}); refreshIssue(); } };
   const toggleAssignee = async (email, isAssigned) => { const method = isAssigned ? 'DELETE' : 'POST'; await safeFetchJson(`${API_BASE}/issues/${selectedIssue.id}/assignees?email=${encodeURIComponent(email)}&requesterEmail=${encodeURIComponent(currentUser.email)}`, { method }); refreshIssue(); };
