@@ -426,7 +426,19 @@ const App = () => {
   const handleInvite = async (e) => { e.preventDefault(); setLoading(true); const { ok, data } = await safeFetchJson(`${API_BASE}/workspaces/${activeWorkspaceId}/invite?email=${encodeURIComponent(inviteEmail)}&inviterEmail=${encodeURIComponent(currentUser.email)}&role=${inviteRole}`, { method: 'POST' }); if (ok) { alert("Invitation sent!"); setShowModal(null); setInviteEmail(''); } else alert(data); setLoading(false); };
   const handleCreateIssue = async (e) => { e.preventDefault(); const payload = { ...newIssue, creatorEmail: currentUser.email }; const { ok, data } = await safeFetchJson(`${API_BASE}/issues/create/${activeProject.id}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }); if(ok) { setShowModal(null); setNewIssue({ summary: '', description: '', priority: 'MEDIUM', assigneeEmail: '' }); refreshBoard(); } else alert(data); };
   const handleAddComment = async (e) => { e.preventDefault(); await safeFetchJson(`${API_BASE}/comments/add`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({text: commentText, userEmail: currentUser.email, issueId: selectedIssue.id}) }); setCommentText(''); safeFetchJson(`${API_BASE}/comments/issue/${selectedIssue.id}`).then(({data})=>setComments(Array.isArray(data)?data:[])); };
-
+const handleDeleteAttachment = async (attachmentId) => {
+      if (!window.confirm("Are you sure you want to delete this attachment?")) return;
+      
+      const { ok } = await safeFetchJson(`${API_BASE}/issues/attachments/${attachmentId}`, { 
+          method: 'DELETE' 
+      });
+      
+      if (ok) {
+          refreshIssue(); // Reload to see it gone
+      } else {
+          alert("Failed to delete attachment.");
+      }
+  };
   const onDragStart = () => { 
     setIsDragging(true); 
     updatesPaused.current = true;
